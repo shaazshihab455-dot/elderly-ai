@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Senior Care AI Voice Assistant</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons for High Accessibility Visuals -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              500: '#0284c7',
+              600: '#0369a1',
+              700: '#075985',
+            },
+            emergency: {
+              500: '#dc2626',
+              600: '#b91c1c',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
+    body {
+      font-family: 'Inter', sans-serif;
+      touch-action: manipulation;
+    }
+    
+    /* Gentle Ripple / Pulse Effect for Voice Listening */
+    .pulse-ring {
+      content: '';
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      background: inherit;
+      border-radius: 50%;
+      animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+    }
+    
+    @keyframes pulse-ring {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.35); opacity: 0.2; }
+      100% { transform: scale(1.5); opacity: 0; }
+    }
+
+    /* Soundwave Audio Visualizer Animation */
+    .wave-bar {
+      animation: wave 1.2s ease-in-out infinite alternate;
+    }
+    @keyframes wave {
+      0% { height: 10px; }
+      100% { height: 48px; }
+    }
+  </style>
+</head>
+<body class="h-full bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300">
+
+  <div class="min-h-full max-w-4xl mx-auto px-4 py-6 flex flex-col justify-between">
+    
+    <!-- Top Header: High-Visibility Clock, Date, and High Contrast Theme Switcher -->
+    <header class="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-md border-2 border-slate-200 dark:border-slate-800 mb-6 flex flex-wrap justify-between items-center gap-4">
+      <div>
+        <div id="liveClock" class="text-4xl sm:text-5xl font-extrabold text-slate-900 dark:text-white tracking-tight">10:00 AM</div>
+        <div id="liveDate" class="text-lg sm:text-xl font-bold text-slate-600 dark:text-slate-300 mt-1">Monday, October 24</div>
+      </div>
+      
+      <!-- Utility Controls -->
+      <div class="flex items-center gap-3">
+        <!-- High Contrast / Theme Toggle -->
+        <button id="themeToggleBtn" onclick="toggleDarkMode()" aria-label="Toggle Dark High Contrast Mode" class="px-5 py-3 rounded-2xl bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white font-bold text-lg flex items-center gap-2 border-2 border-slate-300 dark:border-slate-700 hover:bg-slate-300 dark:hover:bg-slate-700 transition">
+          <i id="themeIcon" class="fa-solid fa-moon text-xl"></i>
+          <span id="themeLabel" class="hidden sm:inline">Night Mode</span>
+        </button>
+        <!-- Font Size Adjuster -->
+        <button onclick="adjustTextSize()" aria-label="Toggle Font Size" class="px-5 py-3 rounded-2xl bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white font-bold text-lg flex items-center gap-2 border-2 border-slate-300 dark:border-slate-700 hover:bg-slate-300 dark:hover:bg-slate-700 transition">
+          <i class="fa-solid fa-font text-xl"></i>
+          <span class="hidden sm:inline">Text Size</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Dynamic AI Display & Mic Button Section -->
+    <main class="flex-1 flex flex-col justify-center items-center my-4 space-y-6">
+      
+      <!-- Main Voice Activation Button -->
+      <div class="relative flex justify-center items-center">
+        <!-- Animated Outer Pulse Ring (Shown when active) -->
+        <div id="pulseRing" class="hidden pulse-ring bg-sky-500 opacity-30"></div>
+        
+        <button id="micBtn" onclick="toggleVoiceListening()" aria-label="Tap to speak with voice assistant" 
+                class="relative z-10 w-48 h-48 sm:w-56 sm:h-56 rounded-full bg-sky-600 dark:bg-sky-500 text-white shadow-2xl flex flex-col justify-center items-center text-center p-4 border-8 border-white dark:border-slate-900 hover:scale-105 active:scale-95 transition-transform duration-200 focus:outline-none focus:ring-8 focus:ring-sky-300">
+          <i id="micIcon" class="fa-solid fa-microphone text-5xl sm:text-6xl mb-2"></i>
+          <span id="micLabel" class="text-xl sm:text-2xl font-black tracking-wide">TAP TO SPEAK</span>
+        </button>
+      </div>
+
+      <!-- Soundwave Visualizer (Visible during speaking/listening) -->
+      <div id="visualizer" class="hidden flex items-center justify-center gap-2 h-12 my-2">
+        <div class="wave-bar w-3 bg-sky-600 dark:bg-sky-400 rounded-full" style="animation-delay: 0.1s"></div>
+        <div class="wave-bar w-3 bg-sky-600 dark:bg-sky-400 rounded-full" style="animation-delay: 0.3s"></div>
+        <div class="wave-bar w-3 bg-sky-600 dark:bg-sky-400 rounded-full" style="animation-delay: 0.2s"></div>
+        <div class="wave-bar w-3 bg-sky-600 dark:bg-sky-400 rounded-full" style="animation-delay: 0.4s"></div>
+        <div class="wave-bar w-3 bg-sky-600 dark:bg-sky-400 rounded-full" style="animation-delay: 0.15s"></div>
+      </div>
+
+      <!-- AI Response & Transcript Card -->
+      <div class="w-full bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 shadow-lg border-2 border-slate-200 dark:border-slate-800 space-y-4">
+        <div class="flex justify-between items-center border-b pb-3 border-slate-200 dark:border-slate-800">
+          <span class="text-lg font-bold text-sky-700 dark:text-sky-400 flex items-center gap-2">
+            <i class="fa-solid fa-sparkles text-xl"></i> Gemini Assistant Response
+          </span>
+          <div class="flex gap-2">
+            <button onclick="clearMemory()" class="px-3 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 text-sm">
+              <i class="fa-solid fa-trash-can"></i> Reset Chat
+            </button>
+            <button onclick="repeatLastSpeech()" aria-label="Read response out loud again" class="px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center gap-2 text-base">
+              <i class="fa-solid fa-volume-high text-sky-600 dark:text-sky-400"></i> Read Aloud
+            </button>
+          </div>
+        </div>
+        
+        <div id="responseContainer" class="min-h-[100px] flex items-center">
+          <p id="assistantResponse" class="text-2xl sm:text-3xl font-extrabold text-slate-800 dark:text-slate-100 leading-relaxed">
+            "Hello! I am your AI assistant. You can speak to me, type a question, or upload/take a photo of a medication bottle to set reminders!"
+          </p>
+        </div>
+      </div>
+
+      <!-- Text Input & Photo Upload Input Controls -->
+      <div class="w-full bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-6 shadow-lg border-2 border-slate-200 dark:border-slate-800 space-y-4">
+        <div class="flex items-center gap-2">
+          <!-- Text Input Field -->
+          <input type="text" id="manualTextInput" placeholder="Type a message or medication reminder..." 
+                 onkeypress="handleKeyPress(event)"
+                 class="flex-1 p-4 text-lg sm:text-xl font-bold bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white rounded-2xl border-2 border-slate-300 dark:border-slate-700 focus:outline-none focus:border-sky-500">
+          
+          <!-- Send Text Button -->
+          <button onclick="submitTextInput()" aria-label="Send typed text message" class="px-5 py-4 bg-sky-600 hover:bg-sky-700 text-white font-extrabold text-lg rounded-2xl transition flex items-center gap-2">
+            <i class="fa-solid fa-paper-plane text-xl"></i>
+            <span class="hidden sm:inline">Send</span>
+          </button>
+
+          <!-- Photo Upload / Camera Button -->
+          <label for="medPhotoInput" class="px-5 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-lg rounded-2xl transition cursor-pointer flex items-center gap-2">
+            <i class="fa-solid fa-camera text-xl"></i>
+            <span class="hidden sm:inline">Photo</span>
+          </label>
+          <input type="file" id="medPhotoInput" accept="image/*" capture="environment" class="hidden" onchange="handleImageUpload(event)">
+        </div>
+      </div>
+
+      <!-- Dynamic Medication Schedule List -->
+      <div class="w-full bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-lg border-2 border-slate-200 dark:border-slate-800 space-y-4">
+        <div class="flex justify-between items-center">
+          <h3 class="text-xl font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+            <i class="fa-solid fa-pills text-emerald-500"></i> Active Medication Alarms
+          </h3>
+          <span id="medCount" class="px-3 py-1 bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold rounded-full text-sm">0 Scheduled</span>
+        </div>
+        <div id="medicationList" class="space-y-3">
+          <!-- Dynamic medication entries rendered here -->
+          <p class="text-slate-500 text-center py-4 font-semibold">No active medication alarms set. Say e.g. "Remind me to take Aspirin at 8:00 AM" to set one!</p>
+        </div>
+      </div>
+
+      <!-- Quick Conversation Starters / Suggestion Chips -->
+      <div class="w-full">
+        <p class="text-base font-bold text-slate-600 dark:text-slate-400 mb-3 px-1">Or tap a quick command:</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <button onclick="handleQuickPhrase('Remind me to take Blood Pressure Pill at 2:30 PM')" class="p-4 bg-slate-200 dark:bg-slate-800 hover:bg-sky-100 dark:hover:bg-slate-700 text-slate-900 dark:text-white rounded-2xl font-bold text-lg text-left flex items-center gap-3 border border-slate-300 dark:border-slate-700 transition">
+            <i class="fa-solid fa-pills text-emerald-600 dark:text-emerald-400 text-xl"></i>
+            <span>"Set reminder: Blood Pressure Pill at 2:30 PM"</span>
+          </button>
+          <button onclick="handleQuickPhrase('What medications do I need to take today?')" class="p-4 bg-slate-200 dark:bg-slate-800 hover:bg-sky-100 dark:hover:bg-slate-700 text-slate-900 dark:text-white rounded-2xl font-bold text-lg text-left flex items-center gap-3 border border-slate-300 dark:border-slate-700 transition">
+            <i class="fa-solid fa-list-check text-sky-600 dark:text-sky-400 text-xl"></i>
+            <span>"What medications do I have scheduled?"</span>
+          </button>
+          <button onclick="handleQuickPhrase('My name is Robert and I live in Chicago')" class="p-4 bg-slate-200 dark:bg-slate-800 hover:bg-sky-100 dark:hover:bg-slate-700 text-slate-900 dark:text-white rounded-2xl font-bold text-lg text-left flex items-center gap-3 border border-slate-300 dark:border-slate-700 transition">
+            <i class="fa-solid fa-user text-amber-600 dark:text-amber-400 text-xl"></i>
+            <span>"Remember: My name is Robert"</span>
+          </button>
+          <button onclick="handleQuickPhrase('What is my name and what time is it?')" class="p-4 bg-slate-200 dark:bg-slate-800 hover:bg-sky-100 dark:hover:bg-slate-700 text-slate-900 dark:text-white rounded-2xl font-bold text-lg text-left flex items-center gap-3 border border-slate-300 dark:border-slate-700 transition">
+            <i class="fa-solid fa-brain text-purple-600 dark:text-purple-400 text-xl"></i>
+            <span>"What is my name?" (Test Memory)</span>
+          </button>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- Essential Senior Action Cards & Emergency SOS Section -->
+    <footer class="mt-6 pt-4 border-t-2 border-slate-200 dark:border-slate-800">
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        
+        <!-- Emergency SOS Button -->
+        <button onclick="triggerEmergencySOS()" class="col-span-2 sm:col-span-1 p-5 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-black text-xl flex flex-col items-center justify-center gap-2 shadow-lg hover:scale-105 active:scale-95 transition">
+          <i class="fa-solid fa-triangle-exclamation text-3xl"></i>
+          <span>EMERGENCY SOS</span>
+        </button>
+
+        <!-- Call Caregiver -->
+        <button onclick="handleQuickPhrase('Call caregiver right now')" class="p-5 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-900 dark:text-white border-2 border-slate-300 dark:border-slate-700 rounded-2xl font-extrabold text-lg flex flex-col items-center justify-center gap-2 shadow transition">
+          <i class="fa-solid fa-heart-pulse text-rose-500 text-3xl"></i>
+          <span>Call Caregiver</span>
+        </button>
+
+        <!-- Medication Tracker -->
+        <button onclick="handleQuickPhrase('Show medicine list')" class="p-5 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-900 dark:text-white border-2 border-slate-300 dark:border-slate-700 rounded-2xl font-extrabold text-lg flex flex-col items-center justify-center gap-2 shadow transition">
+          <i class="fa-solid fa-prescription-bottle-medical text-emerald-500 text-3xl"></i>
+          <span>Medications</span>
+        </button>
+
+        <!-- Daily Routine -->
+        <button onclick="handleQuickPhrase('What is my schedule today?')" class="p-5 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-900 dark:text-white border-2 border-slate-300 dark:border-slate-700 rounded-2xl font-extrabold text-lg flex flex-col items-center justify-center gap-2 shadow transition">
+          <i class="fa-solid fa-calendar-check text-indigo-500 text-3xl"></i>
+          <span>Daily Plan</span>
+        </button>
+
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- Custom Alert Modal for Emergency/Notifications (No browser alert standard) -->
+  <div id="modalOverlay" class="fixed inset-0 bg-slate-950/80 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 border-4 border-red-600 rounded-3xl p-8 max-w-lg w-full text-center space-y-6 shadow-2xl">
+      <div class="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto text-4xl font-black">
+        <i class="fa-solid fa-bell"></i>
+      </div>
+      <h2 id="modalTitle" class="text-3xl font-black text-slate-900 dark:text-white">Emergency Contacting</h2>
+      <p id="modalBody" class="text-xl font-bold text-slate-700 dark:text-slate-300">Calling your primary caregiver and sending your location...</p>
+      <button onclick="closeModal()" class="w-full py-4 bg-slate-800 text-white font-extrabold text-xl rounded-2xl hover:bg-slate-700 transition">
+        Cancel / Close
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // System State Variables
+    const synth = window.speechSynthesis;
+    let recognition = null;
+    let isListening = false;
+    let isSpeaking = false;
+    let lastSpeechText = "";
+    let isLargeText = false;
+
+    // Persistent State
+    let medications = JSON.parse(localStorage.getItem('senior_medications') || '[]');
+    let chatHistory = JSON.parse(localStorage.getItem('senior_chat_history') || '[]');
+
+    // Audio Context for Chimes/Alarms
+    let audioCtx = null;
+    function playAlarmChime() {
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.2); // A5
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.8);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.8);
+      } catch(e) {}
+    }
+
+    // Live IST Clock Engine & Medication Alarm Checker
+    function startLiveClock() {
+      function update() {
+        const now = new Date();
+        const timeOptions = { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
+        const dateOptions = { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        
+        const clockStr = new Intl.DateTimeFormat('en-IN', timeOptions).format(now);
+        const dateStr = new Intl.DateTimeFormat('en-IN', dateOptions).format(now);
+        
+        const clockEl = document.getElementById('liveClock');
+        const dateEl = document.getElementById('liveDate');
+        if (clockEl) clockEl.textContent = clockStr + ' (IST)';
+        if (dateEl) dateEl.textContent = dateStr;
+
+        // Check Medication Alarms
+        checkMedicationAlarms(now);
+      }
+      update();
+      setInterval(update, 1000);
+    }
+
+    function checkMedicationAlarms(now) {
+      const currentShortTime = new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }).format(now);
+      let updated = false;
+
+      medications.forEach(med => {
+        if (med.time && med.time.toLowerCase() === currentShortTime.toLowerCase()) {
+          if (!med.alertedToday) {
+            med.alertedToday = true;
+            updated = true;
+            playAlarmChime();
+            showModal("MEDICATION ALARM", `It is time to take your medication: ${med.name} (${med.time})`);
+            speakText(`Attention! It is now ${med.time}. It is time to take your medication: ${med.name}.`);
+          }
+        } else {
+          // Reset alert status if minute changes
+          if (med.alertedToday) {
+            med.alertedToday = false;
+            updated = true;
+          }
+        }
+      });
+
+      if (updated) saveMedications();
+    }
+
+    function saveMedications() {
+      localStorage.setItem('senior_medications', JSON.stringify(medications));
+      renderMedications();
+    }
+
+    function renderMedications() {
+      const listEl = document.getElementById('medicationList');
+      const countEl = document.getElementById('medCount');
+      if (!listEl) return;
+
+      if (countEl) countEl.textContent = `${medications.length} Scheduled`;
+
+      if (medications.length === 0) {
+        listEl.innerHTML = `<p class="text-slate-500 text-center py-4 font-semibold">No active medication alarms set. Say e.g. "Remind me to take Aspirin at 8:00 AM" or take a photo of your pill bottle!</p>`;
+        return;
+      }
+
+      listEl.innerHTML = medications.map((med, index) => `
+        <div class="flex items-center justify-between p-4 bg-slate-100 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700">
+          <div class="flex items-center gap-3">
+            <div class="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 rounded-xl flex items-center justify-center text-xl font-bold">
+              <i class="fa-solid fa-pills"></i>
+            </div>
+            <div>
+              <div class="text-xl font-extrabold text-slate-900 dark:text-white">${escapeHtml(med.name)}</div>
+              <div class="text-base font-bold text-slate-600 dark:text-slate-400"><i class="fa-regular fa-clock"></i> ${escapeHtml(med.time)}</div>
+            </div>
+          </div>
+          <button onclick="removeMedication(${index})" class="px-4 py-2 bg-rose-100 dark:bg-rose-950 text-rose-600 dark:text-rose-400 hover:bg-rose-200 rounded-xl font-bold flex items-center gap-2">
+            <i class="fa-solid fa-trash-can"></i> <span class="hidden sm:inline">Delete</span>
+          </button>
+        </div>
+      `).join('');
+    }
+
+    function removeMedication(index) {
+      medications.splice(index, 1);
+      saveMedications();
+      speakText("Medication reminder deleted.");
+    }
+
+    function clearMemory() {
+      chatHistory = [];
+      localStorage.removeItem('senior_chat_history');
+      updateAssistantText("Chat memory reset. How can I help you today?");
+      speakText("Chat memory has been reset.");
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]));
+    }
+
+    // Call Gemini API to parse medication intent
+    async function checkAndParseMedicationIntent(text) {
+      const apiKey = "";
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+      const prompt = `Analyze this user message: "${text}". Does the user want to set a medication reminder or schedule a pill? 
+If YES, respond ONLY with JSON: {"isMedication": true, "name": "MEDICINE_NAME", "time": "hh:mm AM/PM"}.
+If NO, respond ONLY with JSON: {"isMedication": false}.
+Do not include markdown or explanations.`;
+
+      try {
+        const res = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }] })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+          const cleaned = reply.replace(/```json|```/g, '').trim();
+          const parsed = JSON.parse(cleaned);
+          if (parsed.isMedication && parsed.name && parsed.time) return parsed;
+        }
+      } catch(e) {}
+      return null;
+    }
+
+    // Call Gemini API with Multi-Turn Context Memory
+    async function callGeminiWithMemory(userInput) {
+      const apiKey = "";
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+      const now = new Date();
+      const timeIST = new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }).format(now);
+      const dateIST = new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).format(now);
+
+      const systemInstruction = `You are a warm, empathetic AI assistant for elderly users. 
+Current exact time: ${timeIST} (Indian Standard Time). Current date: ${dateIST}. Location: India.
+Rules:
+1. Speak warmly, clearly, and concisely (1-3 sentences max).
+2. Answer questions accurately using current local time/date when relevant.
+3. Remember user preferences, name, or background shared in conversation history.`;
+
+      chatHistory.push({ role: 'user', parts: [{ text: userInput }] });
+      if (chatHistory.length > 20) chatHistory = chatHistory.slice(-20); // Keep recent context window
+
+      const payload = {
+        system_instruction: { parts: [{ text: systemInstruction }] },
+        contents: chatHistory
+      };
+
+      try {
+        const res = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const modelReply = data?.candidates?.[0]?.content?.parts?.[0]?.text || "I'm here to help you.";
+          chatHistory.push({ role: 'model', parts: [{ text: modelReply }] });
+          localStorage.setItem('senior_chat_history', JSON.stringify(chatHistory));
+          return modelReply;
+        }
+      } catch(e) {}
+
+      return "I'm having trouble connecting right now, but I am still here to assist you.";
+    }
+
+    // Handle Enter Key inside Text Field
+    function handleKeyPress(event) {
+      if (event.key === 'Enter') {
+        submitTextInput();
+      }
+    }
+
+    // Process Manual Text Input Submissions
+    function submitTextInput() {
+      const inputEl = document.getElementById('manualTextInput');
+      const text = inputEl.value.trim();
+      if (!text) return;
+
+      inputEl.value = '';
+      if (synth && synth.speaking) synth.cancel();
+      processUserVoiceInput(text);
+    }
+
+    // Process Uploaded or Camera Scanned Photo of Medication
+    async function handleImageUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      if (synth && synth.speaking) synth.cancel();
+      updateAssistantText("Scanning medication image with Gemini Vision AI...");
+      document.getElementById('visualizer').classList.remove('hidden');
+
+      try {
+        const base64Data = await fileToBase64(file);
+        const mimeType = file.type || 'image/jpeg';
+
+        const apiKey = "";
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+        const promptText = `Analyze this image of a prescription bottle, pill box, or medication label. 
+1. Identify the name of the medicine.
+2. Identify the specified time or instructions (e.g. 8:00 AM or twice a day).
+3. Provide a warm, senior-friendly summary confirmation.
+4. Also extract structured JSON at the end of your text formatted exactly as: JSON_START{"isMedication":true,"name":"MEDICINE_NAME","time":"12_HOUR_TIME"}JSON_END (e.g., JSON_START{"isMedication":true,"name":"Aspirin","time":"08:00 AM"}JSON_END). If no specific time is on the label, default time to "09:00 AM".`;
+
+        const payload = {
+          contents: [
+            {
+              role: "user",
+              parts: [
+                { text: promptText },
+                {
+                  inlineData: {
+                    mimeType: mimeType,
+                    data: base64Data
+                  }
+                }
+              ]
+            }
+          ]
+        };
+
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+          const resData = await response.json();
+          const replyText = resData?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+          
+          // Check for structured medication JSON payload in the vision response
+          const jsonMatch = replyText.match(/JSON_START(.*?)JSON_END/s);
+          if (jsonMatch && jsonMatch[1]) {
+            try {
+              const medObj = JSON.parse(jsonMatch[1].trim());
+              if (medObj.isMedication && medObj.name) {
+                medications.push({
+                  name: medObj.name,
+                  time: medObj.time || "09:00 AM",
+                  alertedToday: false
+                });
+                saveMedications();
+              }
+            } catch(e) {}
+          }
+
+          // Clean speech response text for senior playback
+          const cleanText = replyText.replace(/JSON_START(.*?)JSON_END/s, '').trim();
+          updateAssistantText(cleanText);
+          speakText(cleanText);
+        } else {
+          updateAssistantText("Unable to read the image clearly. Please try taking another picture with clearer lighting.");
+          speakText("Unable to read the image clearly. Please try taking another photo.");
+        }
+      } catch (err) {
+        updateAssistantText("An error occurred while scanning the image. Please try again.");
+        speakText("An error occurred while scanning the image.");
+      } finally {
+        document.getElementById('visualizer').classList.add('hidden');
+        event.target.value = ''; // Reset file input
+      }
+    }
+
+    // Helper utility: convert image File object to Base64 String
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => {
+          const result = reader.result;
+          const base64 = result.split(',')[1];
+          resolve(base64);
+        };
+        reader.onerror = error => reject(error);
+      });
+    }
+
+    // Process User Voice or Tap Input
+    async function processUserVoiceInput(input) {
+      updateAssistantText(`Processing: "${input}"...`);
+      document.getElementById('visualizer').classList.remove('hidden');
+
+      // 1. Check if user is asking to set a medication reminder
+      const medIntent = await checkAndParseMedicationIntent(input);
+      if (medIntent) {
+        medications.push({
+          name: medIntent.name,
+          time: medIntent.time,
+          alertedToday: false
+        });
+        saveMedications();
+      }
+
+      // 2. Fetch intelligent conversational reply from Gemini with memory
+      const geminiReply = await callGeminiWithMemory(input);
+      updateAssistantText(geminiReply);
+      speakText(geminiReply);
+    }
+
+    // Initialize Page State
+    window.onload = function() {
+      startLiveClock();
+      renderMedications();
+      setTimeout(() => {
+        speakText("Welcome! I am your voice assistant with medication reminders and memory. Tap the blue button to speak.");
+      }, 500);
+    }
+
+    // Text-to-Speech Synthesis
+    function speakText(text) {
+      if (!synth) return;
+      
+      // Cancel any ongoing speech output
+      synth.cancel();
+
+      lastSpeechText = text;
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 0.85; // Slower rate tailored for seniors
+      utterance.pitch = 1.0;
+      utterance.lang = 'en-IN';
+
+      utterance.onstart = function() {
+        isSpeaking = true;
+        document.getElementById('visualizer').classList.remove('hidden');
+      };
+
+      utterance.onend = function() {
+        isSpeaking = false;
+        if (!isListening) {
+          document.getElementById('visualizer').classList.add('hidden');
+        }
+      };
+
+      utterance.onerror = function() {
+        isSpeaking = false;
+        document.getElementById('visualizer').classList.add('hidden');
+      };
+
+      synth.speak(utterance);
+    }
+
+    function repeatLastSpeech() {
+      if (lastSpeechText) {
+        speakText(lastSpeechText);
+      } else {
+        const text = document.getElementById('assistantResponse').textContent;
+        speakText(text);
+      }
+    }
+
+    function updateAssistantText(text) {
+      const el = document.getElementById('assistantResponse');
+      if (el) el.textContent = `"${text}"`;
+    }
+
+    // Web Speech Recognition Logic
+    function toggleVoiceListening() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        showModal("Browser Compatibility Issue", "Voice recognition is not supported in this browser. Please use Chrome, Edge, or Safari.");
+        return;
+      }
+
+      if (isListening) {
+        if (recognition) recognition.stop();
+        return;
+      }
+
+      // Stop speaking if currently in middle of TTS playback
+      if (synth && synth.speaking) {
+        synth.cancel();
+      }
+
+      recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'en-IN';
+
+      recognition.onstart = function() {
+        isListening = true;
+        document.getElementById('pulseRing').classList.remove('hidden');
+        document.getElementById('visualizer').classList.remove('hidden');
+        document.getElementById('micLabel').textContent = "LISTENING...";
+        document.getElementById('micBtn').classList.add('bg-amber-600', 'dark:bg-amber-500');
+        document.getElementById('micBtn').classList.remove('bg-sky-600', 'dark:bg-sky-500');
+      };
+
+      recognition.onresult = function(event) {
+        const transcript = event.results[0][0].transcript;
+        processUserVoiceInput(transcript);
+      };
+
+      recognition.onerror = function(event) {
+        stopListeningState();
+        updateAssistantText("Sorry, I didn't hear that clearly. Please tap the button and try speaking again.");
+        speakText("Sorry, I didn't hear that clearly. Please try speaking again.");
+      };
+
+      recognition.onend = function() {
+        stopListeningState();
+      };
+
+      recognition.start();
+    }
+
+    function stopListeningState() {
+      isListening = false;
+      document.getElementById('pulseRing').classList.add('hidden');
+      if (!isSpeaking) {
+        document.getElementById('visualizer').classList.add('hidden');
+      }
+      document.getElementById('micLabel').textContent = "TAP TO SPEAK";
+      document.getElementById('micBtn').classList.remove('bg-amber-600', 'dark:bg-amber-500');
+      document.getElementById('micBtn').classList.add('bg-sky-600', 'dark:bg-sky-500');
+    }
+
+    // Quick Action & Suggestion Chip Handler
+    function handleQuickPhrase(phrase) {
+      if (synth && synth.speaking) synth.cancel();
+      processUserVoiceInput(phrase);
+    }
+
+    // Emergency SOS Trigger
+    function triggerEmergencySOS() {
+      if (synth && synth.speaking) synth.cancel();
+      playAlarmChime();
+      showModal("EMERGENCY SOS ACTIVATED", "Calling primary emergency contact and notifying caregivers with your live location.");
+      speakText("Emergency alert triggered. Contacting your caregiver now.");
+    }
+
+    // Modal Display Handlers
+    function showModal(title, body) {
+      document.getElementById('modalTitle').textContent = title;
+      document.getElementById('modalBody').textContent = body;
+      document.getElementById('modalOverlay').classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('modalOverlay').classList.add('hidden');
+    }
+
+    // Theme & Visual Accessibility Controls
+    function toggleDarkMode() {
+      const htmlEl = document.documentElement;
+      const themeIcon = document.getElementById('themeIcon');
+      const themeLabel = document.getElementById('themeLabel');
+      
+      if (htmlEl.classList.contains('dark')) {
+        htmlEl.classList.remove('dark');
+        themeIcon.className = 'fa-solid fa-moon text-xl';
+        themeLabel.textContent = 'Night Mode';
+      } else {
+        htmlEl.classList.add('dark');
+        themeIcon.className = 'fa-solid fa-sun text-xl text-amber-400';
+        themeLabel.textContent = 'Day Mode';
+      }
+    }
+
+    function adjustTextSize() {
+      const responseEl = document.getElementById('assistantResponse');
+      if (!responseEl) return;
+
+      isLargeText = !isLargeText;
+      if (isLargeText) {
+        responseEl.classList.remove('text-2xl', 'sm:text-3xl');
+        responseEl.classList.add('text-3xl', 'sm:text-4xl');
+      } else {
+        responseEl.classList.remove('text-3xl', 'sm:text-4xl');
+        responseEl.classList.add('text-2xl', 'sm:text-3xl');
+      }
+    }
+  </script>
+</body>
+</html>
